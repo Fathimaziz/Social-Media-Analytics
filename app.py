@@ -4,6 +4,8 @@ import plotly.express as px
 import joblib
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
+from collections import Counter
+import re
 
 # -----------------------------
 # PAGE CONFIG
@@ -64,6 +66,7 @@ st.sidebar.write("✅ Marketing Insights")
 menu = st.sidebar.radio(
     "Navigation",
     [
+        "Project Overview",
         "Dashboard",
         "Sentiment Prediction",
         "Topic Analysis",
@@ -73,7 +76,6 @@ menu = st.sidebar.radio(
         "Marketing Insights"
     ]
 )
-
 # -----------------------------
 # HEADER
 # -----------------------------
@@ -89,7 +91,43 @@ uploaded_file = st.file_uploader(
 # -----------------------------
 # SENTIMENT PREDICTION
 # -----------------------------
+# -----------------------------
+# PROJECT OVERVIEW
+# -----------------------------
 
+if menu == "Project Overview":
+
+    st.header("📖 Project Overview")
+
+    st.subheader(
+        "NLP-Powered Social Media Analytics Framework"
+    )
+
+    st.write("""
+This project analyzes social media data using
+Natural Language Processing and Machine Learning.
+
+Objectives:
+• Brand Sentiment Analysis
+• Engagement Monitoring
+• Topic Discovery
+• Marketing Insights Generation
+
+Technologies Used:
+• Python
+• Streamlit
+• Pandas
+• Plotly
+• NLP
+• Machine Learning
+
+Machine Learning Model:
+• Logistic Regression
+• TF-IDF Vectorization
+
+Expected Outcome:
+Provide actionable insights for marketing teams.
+""")
 if menu == "Sentiment Prediction":
 
     st.header("🔍 Live Sentiment Analyzer")
@@ -109,13 +147,19 @@ if menu == "Sentiment Prediction":
                 [user_text]
             )
 
-            prediction = model.predict(
-                transformed
-            )[0]
+            prediction = model.predict(transformed)[0]
+
+            probability = max(
+                model.predict_proba(transformed)[0]
+            ) * 100
 
             st.success(
                 f"Predicted Sentiment: {prediction}"
             )
+
+            st.info(
+                f"Confidence Score: {probability:.2f}%"
+            )   
 
 # -----------------------------
 # TOPIC ANALYSIS
@@ -123,111 +167,114 @@ if menu == "Sentiment Prediction":
 
 elif menu == "Topic Analysis":
 
-    st.header("📌 Topic Clusters")
+    st.header("📌 NLP Topic Analysis")
 
-    col1, col2, col3 = st.columns(3)
+    if uploaded_file is not None:
 
-    with col1:
-        st.info("""
-Delivery & Logistics
+        df = pd.read_csv(uploaded_file)
 
-• Delivery
-• Shipping
-• Package
-• Delay
-""")
+        text = " ".join(
+            df["Post"].astype(str)
+        ).lower()
 
-    with col2:
-        st.info("""
-Product Quality
+        words = re.findall(
+            r'\b[a-z]+\b',
+            text
+        )
 
-• Quality
-• Damaged
-• Defective
-• Packaging
-""")
+        stop_words = {
+            "the","and","is","a","an","to",
+            "of","for","with","in","on",
+            "very","not"
+        }
 
-    with col3:
-        st.info("""
-Customer Service
+        filtered_words = [
+            word for word in words
+            if word not in stop_words
+        ]
 
-• Support
-• Refund
-• Complaint
-• Service
-""")
+        word_freq = Counter(
+            filtered_words
+        ).most_common(10)
 
+        topic_df = pd.DataFrame(
+            word_freq,
+            columns=[
+                "Keyword",
+                "Frequency"
+            ]
+        )
+
+        fig = px.bar(
+            topic_df,
+            x="Keyword",
+            y="Frequency",
+            title="Top Keywords from Social Media Posts"
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+        st.dataframe(topic_df)
+
+    else:
+
+        st.warning(
+            "Upload a dataset first."
+        )
 # -----------------------------
 # MARKETING INSIGHTS
 # -----------------------------
 
 elif menu == "Marketing Insights":
-
-    st.header("📈 AI Marketing Recommendations")
-
-    st.success("""
-        ✅ Promote highly positive posts
-
-        ✅ Reward loyal customers
-
-        ✅ Increase customer engagement campaigns
-    """)
-
-    st.warning("""
-        ⚠ Monitor customer complaints
-
-        ⚠ Improve response time for support queries
-
-        ⚠ Track delivery-related issues
-    """)
+    st.header("📈 Recommended Marketing Actions")
 
     st.info("""
-        📌 Suggested Actions
+        • Promote positive customer reviews
 
-        • Run social media campaigns
+        • Respond quickly to negative comments
 
-        • Highlight positive reviews
+        • Improve customer support quality
 
-        • Monitor brand reputation weekly
+        • Monitor trending customer topics
 
-        • Create customer retention programs
+        • Increase engagement with loyal customers
+    """)
+
+    st.success("""
+        Business Recommendation:
+
+        Positive sentiment is higher than negative sentiment.
+        Focus on retaining satisfied customers while addressing
+        negative feedback quickly.
     """)
 elif menu == "Trend Analysis":
+    st.header("📈 Trend Analysis")
 
-    st.header("📈 Brand Sentiment Trend")
-
-    trend_df = pd.DataFrame({
-        "Month": [
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "Jun"
+    trend_data = pd.DataFrame({
+        "Month":[
+            "Jan","Feb","Mar",
+            "Apr","May","Jun"
         ],
-        "Sentiment Score": [
-            60,
-            65,
-            70,
-            76,
-            82,
-            88
+        "Positive":[
+            60,65,70,72,75,80
         ]
     })
 
     fig = px.line(
-        trend_df,
+        trend_data,
         x="Month",
-        y="Sentiment Score",
+        y="Positive",
         markers=True,
-        title="Monthly Sentiment Trend"
+        title="Positive Sentiment Trend"
     )
 
     st.plotly_chart(
         fig,
         use_container_width=True
     )
-
 
 # -----------------------------
 # DATASET REQUIRED PAGES
@@ -263,6 +310,10 @@ elif uploaded_file is not None:
         health_score = (
             positive / total_posts
         ) * 100
+        brand_score = round(
+            (positive / total_posts) * 100,
+            1
+        )
         c1, c2, c3, c4 = st.columns(4)
 
         c1.metric(
@@ -272,28 +323,23 @@ elif uploaded_file is not None:
 
         c2.metric(
             "Positive %",
-            round(
-                positive / total_posts * 100,
-                1
-            )
+            f"{round(positive/total_posts*100,1)}%"
         )
 
         c3.metric(
             "Negative %",
-            round(
-                negative / total_posts * 100,
-                1
-            )
+            f"{round(negative/total_posts*100,1)}%"
         )
 
         c4.metric(
             "Avg Engagement",
-            round(
-                engagement,
-                1
-            )
+            round(engagement,1)
         )
 
+        st.metric(
+    "Brand Health Score",
+    f"{brand_score}%"
+)
         st.subheader("Brand Health Overview")
         st.subheader("💚 Brand Health Score")
         st.progress(
@@ -382,9 +428,23 @@ elif uploaded_file is not None:
         })
 
         st.table(summary_df)
-        st.subheader("Dataset Preview")
-        st.dataframe(df)
+        st.subheader("Dataset Summary")
 
+        st.write(df.describe())
+
+        st.subheader("Dataset Preview")
+
+        st.dataframe(df)
+        csv = df.to_csv(
+            index=False
+        )
+
+        st.download_button(
+            "📥 Download Report",
+            csv,
+            "brandlens_report.csv",
+            "text/csv"
+        )
     # WORD CLOUD
 
     elif menu == "Word Cloud":
