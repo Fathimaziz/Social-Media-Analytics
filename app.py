@@ -83,11 +83,9 @@ menu = st.sidebar.radio(
 st.title("📊 BrandLens AI")
 st.subheader("NLP Powered Social Media Analytics Dashboard")
 
-uploaded_file = st.file_uploader(
-    "Upload CSV Dataset",
-    type=["csv"]
+df = pd.read_csv(
+    "data/social_media_data.csv"
 )
-
 # -----------------------------
 # SENTIMENT PREDICTION
 # -----------------------------
@@ -169,61 +167,51 @@ elif menu == "Topic Analysis":
 
     st.header("📌 NLP Topic Analysis")
 
-    if uploaded_file is not None:
+    text = " ".join(
+        df["Post"].astype(str)
+    ).lower()
 
-        df = pd.read_csv(uploaded_file)
+    words = re.findall(
+        r'\b[a-z]+\b',
+        text
+    )
 
-        text = " ".join(
-            df["Post"].astype(str)
-        ).lower()
+    stop_words = {
+        "the","and","is","a","an","to",
+        "of","for","with","in","on",
+        "very","not"
+    }
 
-        words = re.findall(
-            r'\b[a-z]+\b',
-            text
-        )
+    filtered_words = [
+        word for word in words
+        if word not in stop_words
+    ]
 
-        stop_words = {
-            "the","and","is","a","an","to",
-            "of","for","with","in","on",
-            "very","not"
-        }
+    word_freq = Counter(
+        filtered_words
+    ).most_common(10)
 
-        filtered_words = [
-            word for word in words
-            if word not in stop_words
+    topic_df = pd.DataFrame(
+        word_freq,
+        columns=[
+            "Keyword",
+            "Frequency"
         ]
+    )
 
-        word_freq = Counter(
-            filtered_words
-        ).most_common(10)
+    fig = px.bar(
+        topic_df,
+        x="Keyword",
+        y="Frequency",
+        title="Top Keywords from Social Media Posts"
+    )
 
-        topic_df = pd.DataFrame(
-            word_freq,
-            columns=[
-                "Keyword",
-                "Frequency"
-            ]
-        )
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
 
-        fig = px.bar(
-            topic_df,
-            x="Keyword",
-            y="Frequency",
-            title="Top Keywords from Social Media Posts"
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-
-        st.dataframe(topic_df)
-
-    else:
-
-        st.warning(
-            "Upload a dataset first."
-        )
+    st.dataframe(topic_df)
 # -----------------------------
 # MARKETING INSIGHTS
 # -----------------------------
@@ -280,13 +268,12 @@ elif menu == "Trend Analysis":
 # DATASET REQUIRED PAGES
 # -----------------------------
 
-elif uploaded_file is not None:
+df = pd.read_csv("data/social_media_data.csv")
 
-    df = pd.read_csv(uploaded_file)
 
     # DASHBOARD
 
-    if menu == "Dashboard":
+if menu == "Dashboard":
 
         total_posts = len(df)
 
@@ -447,7 +434,7 @@ elif uploaded_file is not None:
         )
     # WORD CLOUD
 
-    elif menu == "Word Cloud":
+elif menu == "Word Cloud":
 
         st.header("☁️ Word Cloud")
 
@@ -476,7 +463,7 @@ elif uploaded_file is not None:
 
     # ENGAGEMENT ANALYSIS
 
-    elif menu == "Engagement Analysis":
+elif menu == "Engagement Analysis":
 
         st.header("📊 Engagement Analysis")
 
@@ -516,8 +503,4 @@ elif uploaded_file is not None:
             use_container_width=True
         )
 
-else:
-
-    st.info(
-        "Please upload a CSV dataset to continue."
-    )
+    
